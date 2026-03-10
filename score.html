@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>DDPL Scoreboard</title>
+    <style>
+        :root {
+            --ddpl-red: #e63946;
+            --ddpl-yellow: #ffbe0b;
+            --ddpl-dark: #121212;
+            --ddpl-grey: #2d2d2d;
+            --ddpl-green: #2ecc71;
+        }
+
+        body { 
+            font-family: 'Segoe UI', Roboto, sans-serif; 
+            background: var(--ddpl-dark); color: white; margin: 0; 
+            height: 100vh; display: flex; flex-direction: column; overflow: hidden;
+        }
+
+        header { 
+            padding: 10px; background: #000; border-bottom: 3px solid var(--ddpl-yellow);
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .logo { height: 50px; }
+
+        /* Setup Screen */
+        #setup-screen {
+            flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px;
+        }
+        .input-group { background: var(--ddpl-grey); padding: 20px; border-radius: 10px; width: 90%; max-width: 400px; margin-bottom: 20px; }
+        label { display: block; margin-bottom: 5px; color: var(--ddpl-yellow); font-weight: bold; }
+        input { width: 100%; padding: 12px; margin-bottom: 15px; border-radius: 5px; border: none; box-sizing: border-box; font-size: 1rem; }
+        .start-btn { background: var(--ddpl-green); color: black; border: none; padding: 15px 40px; font-size: 1.2rem; font-weight: bold; border-radius: 5px; cursor: pointer; width: 100%; max-width: 400px; }
+
+        /* Scoreboard Screen */
+        #scoreboard-screen { display: none; flex-grow: 1; flex-direction: column; }
+        .score-container { display: flex; flex-grow: 1; }
+        .player-side { 
+            flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; 
+            cursor: pointer; transition: background 0.2s; border: 1px solid #333;
+        }
+        .player-side:active { background: #222; }
+        #side-1 { border-right: 2px solid var(--ddpl-yellow); }
+
+        .player-name { font-size: 1.5rem; font-weight: bold; text-transform: uppercase; margin-bottom: 5px; color: var(--ddpl-yellow); text-align: center; padding: 0 10px; }
+        .handicap-tag { background: var(--ddpl-red); padding: 2px 10px; border-radius: 3px; font-size: 0.9rem; margin-bottom: 20px; }
+        .score-num { font-size: 15rem; font-weight: 800; line-height: 1; margin: 20px 0; }
+        
+        .race-info { background: #000; padding: 10px; text-align: center; font-weight: bold; font-size: 1.2rem; border-top: 1px solid #333; }
+        .controls { display: flex; justify-content: center; gap: 10px; padding: 10px; background: #000; }
+        .controls button { background: #444; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; }
+
+        .sponsor-box { background: white; color: black; height: 50px; display: flex; align-items: center; justify-content: center; font-weight: bold; border-top: 4px solid var(--ddpl-red); }
+    </style>
+</head>
+<body>
+
+    <header>
+        <img src="ddpl_logo_original.png" class="logo">
+        <h1 id="header-title" style="font-size: 0.9rem; color: var(--ddpl-yellow);">DDPL SCOREBOARD</h1>
+        <button onclick="exitMatch()" style="background:var(--ddpl-red); color:white; border:none; padding:5px 10px; border-radius:4px; font-size: 0.7rem;">EXIT</button>
+    </header>
+
+    <div id="setup-screen">
+        <div class="input-group">
+            <label>Player 1 Name</label>
+            <input type="text" id="p1-name-in" placeholder="Enter Name">
+            <label>Handicap (e.g. +2 or -1)</label>
+            <input type="text" id="p1-hdcp-in" placeholder="0">
+        </div>
+        <div class="input-group">
+            <label>Player 2 Name</label>
+            <input type="text" id="p2-name-in" placeholder="Enter Name">
+            <label>Handicap (e.g. +2 or -1)</label>
+            <input type="text" id="p2-hdcp-in" placeholder="0">
+        </div>
+        <div class="input-group">
+            <label>First To (Race To)</label>
+            <input type="number" id="race-to-in" value="7">
+        </div>
+        <button class="start-btn" onclick="startMatch()">START MATCH</button>
+    </div>
+
+    <div id="scoreboard-screen">
+        <div class="score-container">
+            <div id="side-1" class="player-side" onclick="changeScore(1, 1)">
+                <div id="p1-name-disp" class="player-name">Player 1</div>
+                <div id="p1-hdcp-disp" class="handicap-tag">HDCP: 0</div>
+                <div id="p1-score" class="score-num">0</div>
+                <button onclick="changeScore(1, -1, event)" style="background:transparent; color:#555; border:1px solid #555; padding:5px 15px; border-radius:5px;">Minus Frame</button>
+            </div>
+            <div id="side-2" class="player-side" onclick="changeScore(2, 1)">
+                <div id="p2-name-disp" class="player-name">Player 2</div>
+                <div id="p2-hdcp-disp" class="handicap-tag">HDCP: 0</div>
+                <div id="p2-score" class="score-num">0</div>
+                <button onclick="changeScore(2, -1, event)" style="background:transparent; color:#555; border:1px solid #555; padding:5px 15px; border-radius:5px;">Minus Frame</button>
+            </div>
+        </div>
+        <div id="race-display" class="race-info">FIRST TO 7</div>
+    </div>
+
+    <div class="sponsor-box">SPONSORED BY: [YOUR SPONSOR NAME]</div>
+
+    <script>
+        let scores = { 1: 0, 2: 0 };
+        let raceTo = 7;
+
+        function startMatch() {
+            const p1 = document.getElementById('p1-name-in').value || "Player 1";
+            const p2 = document.getElementById('p2-name-in').value || "Player 2";
+            const h1 = document.getElementById('p1-hdcp-in').value || "0";
+            const h2 = document.getElementById('p2-hdcp-in').value || "0";
+            raceTo = document.getElementById('race-to-in').value || 7;
+
+            // Update Scoreboard UI
+            document.getElementById('p1-name-disp').innerText = p1;
+            document.getElementById('p2-name-disp').innerText = p2;
+            document.getElementById('p1-hdcp-disp').innerText = "HDCP: " + h1;
+            document.getElementById('p2-hdcp-disp').innerText = "HDCP: " + h2;
+            document.getElementById('race-display').innerText = "FIRST TO " + raceTo;
+            
+            // Show Scoreboard
+            document.getElementById('setup-screen').style.display = 'none';
+            document.getElementById('scoreboard-screen').style.display = 'flex';
+        }
+
+        function changeScore(player, val, event) {
+            if(event) event.stopPropagation(); // Prevents double counting on minus button
+            
+            scores[player] += val;
+            if(scores[player] < 0) scores[player] = 0;
+            
+            document.getElementById(`p${player}-score`).innerText = scores[player];
+            
+            if(scores[player] >= raceTo) {
+                setTimeout(() => {
+                    alert(document.getElementById(`p${player}-name-disp`).innerText + " WINS THE MATCH!");
+                }, 10);
+            }
+        }
+
+        function exitMatch() {
+            if(confirm("Exit and clear score?")) {
+                scores = { 1: 0, 2: 0 };
+                document.getElementById('p1-score').innerText = 0;
+                document.getElementById('p2-score').innerText = 0;
+                document.getElementById('setup-screen').style.display = 'flex';
+                document.getElementById('scoreboard-screen').style.display = 'none';
+            }
+        }
+    </script>
+</body>
+</html>
