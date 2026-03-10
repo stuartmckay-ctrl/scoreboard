@@ -35,32 +35,38 @@
 
         #scoreboard-screen { display: none; flex-grow: 1; flex-direction: column; }
         
-        /* Sets Display */
         .sets-row { display: flex; justify-content: space-around; background: #000; padding: 10px 0; border-bottom: 2px solid #333; }
         .set-stat { text-align: center; flex: 1; }
         .set-val { font-size: 3rem; font-weight: 900; color: var(--ddpl-yellow); line-height: 1; }
         .set-lbl { font-size: 0.7rem; color: #888; text-transform: uppercase; }
 
-        /* Main Score Area */
         .score-area { display: flex; height: 40vh; position: relative; }
         .player-zone { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; position: relative; border: 1px solid #222; transition: background 0.1s; }
-        .player-zone:active { background: #1a1a1a; }
-        .active-break { border-bottom: 5px solid var(--ddpl-yellow) !important; background: #1a1a1a; }
         
-        .name-tag { font-size: 1.2rem; font-weight: bold; color: var(--ddpl-yellow); margin-bottom: 10px; }
+        /* Break Indicator Styling */
+        .active-break { background: #1a1a1a; box-shadow: inset 0 -10px 0 var(--ddpl-yellow); }
+        .break-badge { 
+            position: absolute; top: 10px; font-size: 0.7rem; 
+            background: var(--ddpl-yellow); color: black; 
+            padding: 3px 10px; border-radius: 20px; font-weight: 900;
+            display: none;
+        }
+        .active-break .break-badge { display: block; }
+        
+        .name-tag { font-size: 1.2rem; font-weight: bold; color: var(--ddpl-yellow); margin-bottom: 5px; }
         .big-num { font-size: 9rem; font-weight: 800; line-height: 1; }
-        .break-dot { font-size: 0.8rem; background: var(--ddpl-yellow); color: black; padding: 2px 8px; border-radius: 10px; margin-top: 5px; font-weight: bold; visibility: hidden; }
-        .active-break .break-dot { visibility: visible; }
 
-        /* Match Log */
+        .control-bar { background: #111; padding: 10px; display: flex; justify-content: center; gap: 15px; border-top: 1px solid #333; }
+        .control-bar button { background: #333; color: white; border: 1px solid #555; padding: 8px 15px; border-radius: 5px; font-size: 0.8rem; cursor: pointer; }
+
         .log-container { flex-grow: 1; background: #080808; display: flex; flex-direction: column; border-top: 1px solid #444; }
         .log-header { padding: 8px 15px; font-size: 0.75rem; background: #222; display: flex; justify-content: space-between; color: #aaa; }
-        #log-output { overflow-y: auto; flex-grow: 1; padding: 12px; margin: 0; font-family: 'Courier New', Courier, monospace; font-size: 0.85rem; }
-        .log-entry { margin-bottom: 4px; border-bottom: 1px solid #1a1a1a; padding-bottom: 2px; }
-        .set-win { color: var(--ddpl-green); font-weight: bold; border-left: 4px solid var(--ddpl-green); padding-left: 8px; margin: 8px 0; }
+        #log-output { overflow-y: auto; flex-grow: 1; padding: 12px; font-family: monospace; font-size: 0.85rem; }
+        .log-entry { margin-bottom: 4px; border-bottom: 1px solid #1a1a1a; }
+        .set-win { color: var(--ddpl-green); font-weight: bold; border-left: 4px solid var(--ddpl-green); padding-left: 8px; }
 
         .footer { background: white; color: black; height: 45px; display: flex; align-items: center; justify-content: center; font-weight: bold; border-top: 4px solid var(--ddpl-red); }
-        .minus-btn { position: absolute; bottom: 8px; right: 8px; background: #333; color: #999; border: 1px solid #444; padding: 5px 10px; border-radius: 4px; font-size: 0.6rem; z-index: 5; }
+        .minus-btn { position: absolute; bottom: 8px; right: 8px; background: #222; color: #777; border: 1px solid #333; padding: 4px 8px; border-radius: 4px; font-size: 0.6rem; }
     </style>
 </head>
 <body>
@@ -68,12 +74,12 @@
     <header>
         <img src="ddpl_logo_original.png" class="logo">
         <h1 style="font-size: 0.9rem; color: var(--ddpl-yellow); margin: 0;">DDPL SCOREBOARD</h1>
-        <button onclick="exitToSetup()" style="background:var(--ddpl-red); color:white; border:none; padding:6px 12px; border-radius:4px; font-weight:bold; cursor:pointer;">EXIT</button>
+        <button onclick="exitToSetup()" style="background:var(--ddpl-red); color:white; border:none; padding:6px 12px; border-radius:4px; font-weight:bold;">EXIT</button>
     </header>
 
     <div id="setup-screen">
         <div class="input-group">
-            <label>Format</label>
+            <label>Match Format</label>
             <select id="mode-select" onchange="updateSetupUI()">
                 <option value="straight">Straight Match</option>
                 <option value="sets">Set Play</option>
@@ -81,9 +87,18 @@
         </div>
 
         <div class="input-group">
-            <label>Players / Teams</label>
-            <input type="text" id="p1-name" placeholder="Home Side">
-            <input type="text" id="p2-name" placeholder="Away Side">
+            <label>Player 1 (Home)</label>
+            <input type="text" id="p1-name" placeholder="Name">
+            <label>Player 2 (Away)</label>
+            <input type="text" id="p2-name" placeholder="Name">
+        </div>
+
+        <div class="input-group">
+            <label>Starting Break</label>
+            <select id="start-breaker">
+                <option value="1">Player 1 to Break</option>
+                <option value="2">Player 2 to Break</option>
+            </select>
         </div>
 
         <div id="straight-options" class="input-group">
@@ -109,22 +124,27 @@
         </div>
 
         <div class="score-area">
-            <div id="p1-zone" class="player-zone active-break" onclick="handleScore(1)">
-                <div class="break-dot">ON BREAK</div>
+            <div id="p1-zone" class="player-zone" onclick="handleScore(1)">
+                <div class="break-badge">BREAKING</div>
                 <div id="p1-name-disp" class="name-tag">PLAYER 1</div>
                 <div id="p1-score-disp" class="big-num">0</div>
-                <button class="minus-btn" onclick="adjustScore(1, -1, event)">MINUS</button>
+                <button class="minus-btn" onclick="adjustScore(1, -1, event)">-1</button>
             </div>
             <div id="p2-zone" class="player-zone" onclick="handleScore(2)">
-                <div class="break-dot">ON BREAK</div>
+                <div class="break-badge">BREAKING</div>
                 <div id="p2-name-disp" class="name-tag">PLAYER 2</div>
                 <div id="p2-score-disp" class="big-num">0</div>
-                <button class="minus-btn" onclick="adjustScore(2, -1, event)">MINUS</button>
+                <button class="minus-btn" onclick="adjustScore(2, -1, event)">-1</button>
             </div>
         </div>
 
+        <div class="control-bar">
+            <button onclick="toggleBreaker()">🔄 Change Break</button>
+            <button onclick="addLog('Match Paused/Time Out')">⏸ Time Out</button>
+        </div>
+
         <div class="log-container">
-            <div class="log-header"><span id="format-tag">RACE TO 7</span><span>MATCH LOG</span></div>
+            <div class="log-header"><span id="format-tag"></span><span>MATCH LOG</span></div>
             <div id="log-output"></div>
         </div>
     </div>
@@ -134,7 +154,7 @@
     <script>
         let matchData = {
             mode: 'straight',
-            p1: 'P1', p2: 'P2',
+            p1: '', p2: '',
             scores: [0, 0],
             sets: [0, 0],
             raceFrames: 7,
@@ -151,50 +171,59 @@
 
         function initMatch() {
             matchData.mode = document.getElementById('mode-select').value;
-            matchData.p1 = document.getElementById('p1-name').value || "Home";
-            matchData.p2 = document.getElementById('p2-name').value || "Away";
+            matchData.p1 = document.getElementById('p1-name').value || "P1";
+            matchData.p2 = document.getElementById('p2-name').value || "P2";
             matchData.raceFrames = parseInt(document.getElementById('race-frames').value);
             matchData.raceSets = parseInt(document.getElementById('race-sets').value);
             matchData.fps = parseInt(document.getElementById('frames-per-set').value);
+            matchData.breaker = parseInt(document.getElementById('start-breaker').value);
             
             matchData.scores = [0, 0];
             matchData.sets = [0, 0];
-            matchData.breaker = 1;
 
             document.getElementById('p1-name-disp').innerText = matchData.p1;
             document.getElementById('p2-name-disp').innerText = matchData.p2;
             document.getElementById('sets-header').style.display = matchData.mode === 'sets' ? 'flex' : 'none';
             document.getElementById('format-tag').innerText = matchData.mode === 'sets' ? 
-                `FIRST TO ${matchData.raceSets} SETS (FT${matchData.fps} PER SET)` : `FIRST TO ${matchData.raceFrames}`;
+                `SETS: FT${matchData.raceSets} (FT${matchData.fps} FRAMES)` : `STRAIGHT: FIRST TO ${matchData.raceFrames}`;
 
             render();
             document.getElementById('setup-screen').style.display = 'none';
             document.getElementById('scoreboard-screen').style.display = 'flex';
-            addLog("Match Started");
+            addLog(`Match Started. ${matchData.breaker === 1 ? matchData.p1 : matchData.p2} to break first.`);
         }
 
         function handleScore(playerIndex) {
             const idx = playerIndex - 1;
             matchData.scores[idx]++;
-            addLog(`${idx === 0 ? matchData.p1 : matchData.p2} won frame (${matchData.scores[0]}-${matchData.scores[1]})`);
+            const name = idx === 0 ? matchData.p1 : matchData.p2;
+            addLog(`${name} won frame (${matchData.scores[0]}-${matchData.scores[1]})`);
             
-            // Toggle Breaker
-            matchData.breaker = matchData.breaker === 1 ? 2 : 1;
+            // Auto-switch breaker after every frame
+            toggleBreaker(false); 
 
             if (matchData.mode === 'straight') {
                 if (matchData.scores[idx] >= matchData.raceFrames) {
-                    alert(`${idx === 0 ? matchData.p1 : matchData.p2} WINS THE MATCH!`);
+                    alert(`${name} WINS THE MATCH!`);
                 }
             } else {
                 if (matchData.scores[idx] >= matchData.fps) {
                     matchData.sets[idx]++;
-                    addLog(`${idx === 0 ? matchData.p1 : matchData.p2} WON THE SET!`, true);
+                    addLog(`${name} WON THE SET!`, true);
                     matchData.scores = [0, 0];
                     if (matchData.sets[idx] >= matchData.raceSets) {
-                        alert(`${idx === 0 ? matchData.p1 : matchData.p2} WINS THE MATCH!`);
+                        alert(`${name} WINS THE MATCH!`);
+                    } else {
+                        alert(`Set Over! ${name} wins the set. Please confirm who is breaking for the next set.`);
                     }
                 }
             }
+            render();
+        }
+
+        function toggleBreaker(isManual = true) {
+            matchData.breaker = matchData.breaker === 1 ? 2 : 1;
+            if (isManual) addLog(`Break changed to ${matchData.breaker === 1 ? matchData.p1 : matchData.p2}`);
             render();
         }
 
@@ -202,7 +231,6 @@
             e.stopPropagation();
             const idx = playerIndex - 1;
             matchData.scores[idx] = Math.max(0, matchData.scores[idx] + amt);
-            addLog(`Correction: ${idx === 0 ? matchData.p1 : matchData.p2} score adjusted`);
             render();
         }
 
@@ -221,8 +249,8 @@
             document.getElementById('p1-sets-disp').innerText = matchData.sets[0];
             document.getElementById('p2-sets-disp').innerText = matchData.sets[1];
             
-            document.getElementById('p1-zone').classList.toggle('active-break', matchData.breaker === 1);
-            document.getElementById('p2-zone').classList.toggle('active-break', matchData.breaker === 2);
+            document.getElementById('p1-zone').className = `player-zone ${matchData.breaker === 1 ? 'active-break' : ''}`;
+            document.getElementById('p2-zone').className = `player-zone ${matchData.breaker === 2 ? 'active-break' : ''}`;
         }
 
         function exitToSetup() {
